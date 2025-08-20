@@ -45,14 +45,17 @@ class MagpieCrawler
     {
         $url = self::URLS["PRODUCTS"];
         $response = $this->client->get($url, [
-            'params' => [
+            'query' => [
                 'page' => $page,
             ]
         ]);
         $crawler = new Crawler($response->getBody()->getContents());
-
-        return $crawler->filter("#products .product")->each(function (Crawler $crawler) {
-            return Product::fromCrawledData($crawler);
+        $products = [];
+        // we need the url parameter to create an absolute image url in the product object
+        $crawler->filter("#products .product")->each(function (Crawler $crawler) use ($url, &$products) {
+            $products = array_merge($products, Product::fromCrawledData($crawler, $url));
         });
+
+        return $products;
     }
 }
