@@ -99,8 +99,10 @@ class Product
             return new DateTime('tomorrow');
         }
 
-        // 3. Extract explicit dates (formats like "21 Aug 2025", "2025-08-20")
-        // Regex matches DD MMM YYYY or YYYY-MM-DD
+        // 3. Remove ordinal suffixes (st, nd, rd, th)
+        $shippingText = preg_replace('/(\d+)(st|nd|rd|th)/i', '$1', $shippingText);
+
+        // 4. Extract explicit dates (DD MMM YYYY or YYYY-MM-DD)
         if (preg_match('/(\d{1,2}\s+[a-z]{3,9}\s+\d{4})/i', $shippingText, $matches)) {
             $date = DateTime::createFromFormat('j M Y', $matches[1]);
             if ($date !== false) {
@@ -112,28 +114,20 @@ class Product
             return new DateTime($matches[1]);
         }
 
-        // 4. Handle "available on DD MMM YYYY" or "delivery by DD MMM YYYY"
-        if (preg_match('/(?:available on|delivery by|have it)\s+(\d{1,2}\s+[a-z]{3,9}\s+\d{4})/i', $shippingText, $matches)) {
+        // 5. Handle keywords like "available on", "delivery by", "delivery from", "have it"
+        if (preg_match('/(?:available on|delivery by|delivery from|have it)\s+(\d{1,2}\s+[a-z]{3,9}\s+\d{4})/i', $shippingText, $matches)) {
             $date = DateTime::createFromFormat('j M Y', $matches[1]);
             if ($date !== false) {
                 return $date;
             }
         }
 
-        // 5. Handle "delivery from DD MMM YYYY"
-        if (preg_match('/delivery from\s+(\d{1,2}\s+[a-z]{3,9}\s+\d{4})/i', $shippingText, $matches)) {
-            $date = DateTime::createFromFormat('j M Y', $matches[1]);
-            if ($date !== false) {
-                return $date;
-            }
-        }
-
-        // 6. If text says "free delivery" without date, return null
+        // 6. Free delivery/shipping without date
         if (str_contains($shippingText, 'free delivery') || str_contains($shippingText, 'free shipping')) {
             return null;
         }
 
-        return null; // fallback
+        return null;
     }
 
     private function getPrice(): float
