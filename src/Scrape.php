@@ -6,8 +6,6 @@ require 'vendor/autoload.php';
 
 class Scrape
 {
-    private array $products = [];
-
     public function run(): void
     {
         $crawler = new MagpieCrawler();
