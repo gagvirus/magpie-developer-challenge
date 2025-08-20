@@ -31,9 +31,11 @@ class Product
     }
 
     /**
+     * Creates one or many product variants for each colour
+     *
      * @param Crawler $product
      * @param string $url
-     * @return Product[]
+     * @return Product[] an array of all product variants
      */
     public static function fromCrawledData(Crawler $product, string $url): array
     {
