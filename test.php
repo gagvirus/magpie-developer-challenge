@@ -73,7 +73,10 @@ function parse_product(Crawler $product)
     $coloursWrapper = $wrapper->children('div')->eq(0);
     $price = $wrapper->children('div')->eq(1);
     $availability = $wrapper->children('div')->eq(2);
-    $delivery = $wrapper->children('div')->eq(3);
+    $shippingText = "";
+    if ($wrapper->children('div')->count() > 3) {
+        $shippingText = $wrapper->children('div')->eq(3)->text();
+    }
 
     $name = $title->filter('.product-name')->text();
     $capacity = $title->filter('.product-capacity')->text();
@@ -95,11 +98,10 @@ function parse_product(Crawler $product)
         'colours' => $colours,
         'availabilityText' => $availabilityText,
         'isAvailable' => $availabilityText === IS_AVAILABLE_TEXT,
+        'shippingText' => $shippingText,
+        // todo: add shipping data
     ];
 }
-
-$prod = $products->eq(5);
-dd(parse_product($prod));
 
 $results = $products->each(function (Crawler $product) use ($url) {
     return parse_product($product);
