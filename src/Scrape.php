@@ -13,9 +13,11 @@ class Scrape
         // this contains the array of all product objects
         $products = $crawler->fetchAllProducts();
 
-        file_put_contents('output.json', json_encode(array_map(function (Product $product) {
+        $productsArray = array_map(function (Product $product) {
             return $product->toArray();
-        }, $products)));
+        }, $products);
+
+        file_put_contents('output.json', json_encode($productsArray));
     }
 }
 
