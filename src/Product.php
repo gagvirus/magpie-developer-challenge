@@ -130,6 +130,10 @@ class Product
         return null;
     }
 
+    public function getChecksum(): string {
+        return md5(json_encode([$this->name, $this->capacity, $this->colour]));
+    }
+
     private function getPrice(): float
     {
         // Remove everything except digits and decimal point
