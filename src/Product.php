@@ -2,6 +2,7 @@
 
 namespace App;
 
+use DateTime;
 use InvalidArgumentException;
 use Symfony\Component\DomCrawler\Crawler;
 use Symfony\Component\DomCrawler\UriResolver;
@@ -67,6 +68,81 @@ class Product
         return $products;
     }
 
+    public function toArray(): array
+    {
+        $shippingDate = $this->getShippingDate();
+        $shippingDateStr = $shippingDate ? $shippingDate->format('Y-m-d') : null;
+        return [
+            'title' => $this->name . ' ' . $this->capacity,
+            'price' => $this->getPrice(),
+            'imageUrl' => $this->imageUrl,
+            'capacityMB' => $this->capacityMB(),
+            'colour' => $this->colour,
+            'availabilityText' => $this->availabilityText,
+            'isAvailable' => $this->availabilityText === self::IS_AVAILABLE_TEXT,
+            'shippingText' => $this->shippingText,
+            'shippingDate' => $shippingDateStr,
+        ];
+    }
+
+    function getShippingDate(): ?DateTime
+    {
+        $shippingText = trim(strtolower($this->shippingText));
+
+        // 1. Check for "unavailable" or no date
+        if (str_contains($shippingText, 'unavailable')) {
+            return null;
+        }
+
+        // 2. Handle "tomorrow"
+        if (str_contains($shippingText, 'tomorrow')) {
+            return new DateTime('tomorrow');
+        }
+
+        // 3. Extract explicit dates (formats like "21 Aug 2025", "2025-08-20")
+        // Regex matches DD MMM YYYY or YYYY-MM-DD
+        if (preg_match('/(\d{1,2}\s+[a-z]{3,9}\s+\d{4})/i', $shippingText, $matches)) {
+            $date = DateTime::createFromFormat('j M Y', $matches[1]);
+            if ($date !== false) {
+                return $date;
+            }
+        }
+
+        if (preg_match('/(\d{4}-\d{2}-\d{2})/', $shippingText, $matches)) {
+            return new DateTime($matches[1]);
+        }
+
+        // 4. Handle "available on DD MMM YYYY" or "delivery by DD MMM YYYY"
+        if (preg_match('/(?:available on|delivery by|have it)\s+(\d{1,2}\s+[a-z]{3,9}\s+\d{4})/i', $shippingText, $matches)) {
+            $date = DateTime::createFromFormat('j M Y', $matches[1]);
+            if ($date !== false) {
+                return $date;
+            }
+        }
+
+        // 5. Handle "delivery from DD MMM YYYY"
+        if (preg_match('/delivery from\s+(\d{1,2}\s+[a-z]{3,9}\s+\d{4})/i', $shippingText, $matches)) {
+            $date = DateTime::createFromFormat('j M Y', $matches[1]);
+            if ($date !== false) {
+                return $date;
+            }
+        }
+
+        // 6. If text says "free delivery" without date, return null
+        if (str_contains($shippingText, 'free delivery') || str_contains($shippingText, 'free shipping')) {
+            return null;
+        }
+
+        return null; // fallback
+    }
+
+    private function getPrice(): float
+    {
+        // Remove everything except digits and decimal point
+        $clean = preg_replace('/[^\d.]/', '', $this->price);
+        return (float)$clean;
+    }
+
     function capacityMB(): float
     {
         // Normalize input (remove spaces, uppercase)
@@ -90,29 +166,5 @@ class Product
             default:
                 throw new InvalidArgumentException("Unknown unit: $unit");
         }
-    }
-
-
-    private function getPrice(): float
-    {
-        // Remove everything except digits and decimal point
-        $clean = preg_replace('/[^\d.]/', '', $this->price);
-        return (float)$clean;
-    }
-
-
-    public function toArray(): array
-    {
-        return [
-            'title' => $this->name . ' ' . $this->capacity,
-            'price' => $this->getPrice(),
-            'imageUrl' => $this->imageUrl,
-            'capacityMB' => $this->capacityMB(),
-            'colour' => $this->colour,
-            'availabilityText' => $this->availabilityText,
-            'isAvailable' => $this->availabilityText === self::IS_AVAILABLE_TEXT,
-            'shippingText' => $this->shippingText,
-            // todo: add shipping data
-        ];
     }
 }
