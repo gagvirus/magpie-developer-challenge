@@ -3,6 +3,7 @@
 namespace App;
 
 use DateTime;
+use Exception;
 use InvalidArgumentException;
 use Symfony\Component\DomCrawler\Crawler;
 use Symfony\Component\DomCrawler\UriResolver;
@@ -76,7 +77,7 @@ class Product
             'title' => $this->name . ' ' . $this->capacity,
             'price' => $this->getPrice(),
             'imageUrl' => $this->imageUrl,
-            'capacityMB' => $this->capacityMB(),
+            'capacityMB' => $this->getCapacityMB(),
             'colour' => $this->colour,
             'availabilityText' => $this->availabilityText,
             'isAvailable' => $this->availabilityText === self::IS_AVAILABLE_TEXT,
@@ -85,7 +86,7 @@ class Product
         ];
     }
 
-    function getShippingDate(): ?DateTime
+    private function getShippingDate(): ?DateTime
     {
         $shippingText = trim(strtolower($this->shippingText));
 
@@ -111,7 +112,11 @@ class Product
         }
 
         if (preg_match('/(\d{4}-\d{2}-\d{2})/', $shippingText, $matches)) {
-            return new DateTime($matches[1]);
+            try {
+                return new DateTime($matches[1]);
+            } catch (Exception $e) {
+                return null;
+            }
         }
 
         // 5. Handle keywords like "available on", "delivery by", "delivery from", "have it"
@@ -122,15 +127,13 @@ class Product
             }
         }
 
-        // 6. Free delivery/shipping without date
-        if (str_contains($shippingText, 'free delivery') || str_contains($shippingText, 'free shipping')) {
-            return null;
-        }
+        // Free delivery/shipping without date, everything else
 
         return null;
     }
 
-    public function getChecksum(): string {
+    public function getChecksum(): string
+    {
         return md5(json_encode([$this->name, $this->capacity, $this->colour]));
     }
 
@@ -141,7 +144,7 @@ class Product
         return (float)$clean;
     }
 
-    function capacityMB(): float
+    private function getCapacityMB(): float
     {
         // Normalize input (remove spaces, uppercase)
         $value = strtoupper(trim(str_replace(' ', '', $this->capacity)));
