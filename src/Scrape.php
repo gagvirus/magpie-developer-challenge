@@ -10,9 +10,14 @@ class Scrape
 
     public function run(): void
     {
-        $document = ScrapeHelper::fetchDocument('https://www.magpiehq.com/developer-challenge/smartphones');
+        $crawler = new MagpieCrawler();
 
-        file_put_contents('output.json', json_encode($this->products));
+        // this contains the array of all product objects
+        $products = $crawler->fetchAllProducts();
+
+        file_put_contents('output.json', json_encode(array_map(function (Product $product) {
+            return $product->toArray();
+        }, $products)));
     }
 }
 
