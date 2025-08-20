@@ -56,6 +56,11 @@ $crawler = new Crawler($html);
 
 $products = $crawler->filter("#products .product");
 
+function get_availability(string $text)
+{
+    return str_replace("Availability: ", "", $text);
+}
+
 $results = $products->each(function (Crawler $product) use ($url) {
     $name = $product->filter('.product-name')->text();
     $price = $product->filter('.my-8.block.text-center.text-lg')->text();
@@ -65,6 +70,7 @@ $results = $products->each(function (Crawler $product) use ($url) {
     $colours = $product->filter('span[data-colour]')->each(function(Crawler $crawler) {
         return $crawler->attr('data-colour');
     });
+    $availabilityText = get_availability($product->filter('div')->eq(6)->text());
     return [
         'title' => $name . ' ' . $capacity,
         'price' => parseCurrency($price),
@@ -72,6 +78,8 @@ $results = $products->each(function (Crawler $product) use ($url) {
         'capacityMB' => convertToMB($capacity),
         // todo: Each colour variant should be treated as a separate product.
         'colours' => $colours,
+        // todo: perhaps add a "availability" field with ENUM ?
+        'availabilityText' => $availabilityText,
     ];
 });
 
