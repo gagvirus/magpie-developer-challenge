@@ -7,6 +7,8 @@ use GuzzleHttp\Client;
 use Symfony\Component\DomCrawler\Crawler;
 use Symfony\Component\DomCrawler\UriResolver;
 
+const IS_AVAILABLE_TEXT = 'In Stock';
+
 function dd($args)
 {
     var_dump($args);
@@ -61,16 +63,29 @@ function get_availability(string $text)
     return str_replace("Availability: ", "", $text);
 }
 
-$results = $products->each(function (Crawler $product) use ($url) {
-    $name = $product->filter('.product-name')->text();
-    $price = $product->filter('.my-8.block.text-center.text-lg')->text();
-    $imageSrc = $product->filter('img')->first()->attr("src");
+function parse_product(Crawler $product)
+{
+    global $url;
+    $title = $product->filter('h3');
+    $image = $product->filter('img');
+    // contains the .bg-white.rounded div container
+    $wrapper = $product->children('div')->first();
+    $coloursWrapper = $wrapper->children('div')->eq(0);
+    $price = $wrapper->children('div')->eq(1);
+    $availability = $wrapper->children('div')->eq(2);
+    $delivery = $wrapper->children('div')->eq(3);
+
+    $name = $title->filter('.product-name')->text();
+    $capacity = $title->filter('.product-capacity')->text();
+    $price = $price->text();
+    // get the image src as it is on the img tag
+    $imageSrc = $image->first()->attr("src");
+    // get absolute url
     $imageUrl = UriResolver::resolve($imageSrc, $url);
-    $capacity = $product->filter('.product-capacity')->text();
-    $colours = $product->filter('span[data-colour]')->each(function(Crawler $crawler) {
+    $colours = $coloursWrapper->filter('span[data-colour]')->each(function (Crawler $crawler) {
         return $crawler->attr('data-colour');
     });
-    $availabilityText = get_availability($product->filter('div')->eq(6)->text());
+    $availabilityText = get_availability($availability->text());
     return [
         'title' => $name . ' ' . $capacity,
         'price' => parseCurrency($price),
@@ -78,9 +93,16 @@ $results = $products->each(function (Crawler $product) use ($url) {
         'capacityMB' => convertToMB($capacity),
         // todo: Each colour variant should be treated as a separate product.
         'colours' => $colours,
-        // todo: perhaps add a "availability" field with ENUM ?
         'availabilityText' => $availabilityText,
+        'isAvailable' => $availabilityText === IS_AVAILABLE_TEXT,
     ];
+}
+
+$prod = $products->eq(5);
+dd(parse_product($prod));
+
+$results = $products->each(function (Crawler $product) use ($url) {
+    return parse_product($product);
 });
 
 
